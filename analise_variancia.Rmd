@@ -1,0 +1,146 @@
+---
+title: "ANOVA_ind"
+author: "Tays Silva"
+date: "2022-11-04"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+Análise individual e análise conjunta
+```{r, message=FALSE}
+library(tidyverse)
+library(metan)
+library(ggplot2)
+library(doBy)
+
+```
+
+
+```{r}
+dados_gge <- read.csv("df_cana.csv", header = T, sep = ";")
+
+dados3 <- dados_gge %>% 
+  mutate(ENV = as.factor(ENV),
+         CLONE = as.factor(CLONE),
+         REP = as.factor(REP))
+
+anova_individual <- anova_ind(dados3, ENV, CLONE, REP, resp = c(ATR, FIBRA, TCH, TAH))
+
+print(anova_individual$ATR)
+
+
+
+```
+
+```{r}
+anova_conjunta <- anova_joint(dados3, ENV, CLONE, REP, resp = c(ATR, FIBRA, TCH))
+print(anova_conjunta$TCH)
+
+
+
+```
+
+
+```{r}
+library(tidyr)
+rm(data) <- gather(dados3, CLONE, ATR)
+```
+
+
+```{r, message=FALSE}
+
+
+#dados_agrupados1 |>
+ #  group_by(CLONE) |>
+  #summarise_if(is.numeric, list(mean = mean, sd = sd, se = ~sd(.x)/sqrt(length(.x))))
+
+dados_agrupados <- dados3 %>% filter(ENV == 1)
+
+dados_agrupados |>
+   group_by(CLONE) |>
+  select(-c(ENV, REP)) |>
+  summarise_all(list(mean = mean, sd = sd, se = ~sd(.x)/sqrt(length(.x)))) |>
+  relocate(CLONE, ATR_mean, ATR_sd, ATR_se, FIBRA_mean, FIBRA_sd, FIBRA_se, TCH_mean, TCH_sd, TCH_se, TAH_mean, TAH_sd, TAH_se) -> d8
+
+write.csv(d8, file = "rank_genot_amb8.csv")
+
+
+
+
+```
+
+```{r}
+dados3
+
+modelo <- lmer(TCH ~ ENV + CLONE + (1|CLONE), data = dados3)
+
+```
+
+```{r}
+# Realize a análise de variância (ANOVA)
+anova_resultado <- anova(modelo)
+
+# Imprima os resultados da ANOVA
+print(anova_resultado)
+
+# Plot dos resultados
+ggplot(data = dados3, aes(x = as.factor(ENV), y = TCH, group = CLONE)) +
+  geom_boxplot() +
+  labs(x = "Localidade", y = "TCH") +
+  theme_minimal()
+```
+
+```{r}
+library(multcomp)
+
+# Teste ANOVA unidirecional
+modelo_anova <- aov(TCH ~ ENV, data = dados3)
+
+dados3 |>
+  group_by(ENV) |>
+  summarise_at(vars(TCH), list(mean = mean, se = ~sd(.)/sqrt(length(.))))
+
+# Realize o teste de Tukey para comparações múltiplas
+resultado_anova <- summary(modelo_anova)
+teste_tukey <- glht(modelo_anova, linfct = mcp(ENV = "Tukey"))
+```
+
+```{r}
+
+library(emmeans)
+# Sumário do teste de Tukey
+summary(teste_tukey)
+
+# Plot dos resultados
+plot(teste_tukey)
+modelo_lm <- lm(TCH ~ ENV, data = df_gge)
+
+em <- emmeans(modelo_lm, ~ ENV)
+dif_locais <- cld(em, Letters = letters, reversed = T)
+
+```
+
+
+```{r}
+# Plot dos resultados com letras de significância
+
+letras <- c('d', 'a', 'd', 'd', 'e', 'c', 'd', 'b')
+
+dados3 |> group_by(ENV) |> summarise_if(is.numeric, mean) -> df_mean
+df_mean |> add_column(letras, .after = 'TAH') -> df_mean
+
+
+ggplot(data = df_mean) +
+  geom_bar(aes(x = ENV, y = TCH, fill = ENV), stat = 'identity', fill = "deepskyblue4") +
+    geom_text(aes(x = ENV, y = TCH, label = letras), 
+            position = position_dodge(width = 0.75), vjust = -0.5, size = 5) +
+  labs(x = "Locality", y = "Ton of sugarcane per hectare (TSH)") +
+  theme_classic() +
+  theme(axis.title = (element_text(size = 14)),
+        axis.text = (element_text(size = 10, colour = "black")))
+```
+
+ton of sugarcane per hectare
+
+
+

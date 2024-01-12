@@ -1,0 +1,397 @@
+---
+title: "gge_biplot"
+author: "Tays Silva"
+date: "2023-03-01"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+Carregando pacotes
+
+```{r, message=FALSE}
+
+library(tidyverse)
+library(metan)
+library(ggpubr)
+
+```
+
+Entrada dos dados
+
+Megaambientes com base em 11 genótipos - GGE biplot
+
+```{r, message=FALSE}
+df_gge <- read.table("dados_t2.txt", header = T)
+
+
+df_gge <- df_gge %>% mutate(ENV = as.factor(ENV),
+                            CLONE = as.factor(CLONE),
+                            REP = as.factor(REP))
+
+```
+
+
+Modelo básico gge biplot
+
+```{r, message=FALSE}
+
+ge_model <- gge(df_gge, ENV, CLONE, everything())
+
+```
+
+```{r, message=FALSE}
+
+plot1 <- plot(ge_model)
+
+
+```
+
+Valores das caracteristicas estimados pelo modelo GGE biplot
+
+```{r, message=FALSE}
+
+predicao <- predict(ge_model, naxis = 2)
+print(predicao$ATR, digits = 6)
+
+write.csv(predicao, file = "predicao.csv", sep = ",")
+
+```
+
+Desempenho médio vs estabilidade
+
+```{r, message=FALSE}
+
+library(metan)
+
+gge_desemp_estab <-gge(ddf, ENV, CLONE, resp = TCH, svp = "genotype")
+
+
+peFIBRA <- plot(gge_desemp_estab, type = 2,
+          large_label = 6,
+          col.gen = "black",
+          col.env = "gray",
+          col.line = "blue4",
+          axis_expand = 1.2,
+          title = FALSE,
+          size.text.gen = 4,
+          size.text.env = 4) + theme_test() +
+   theme(axis.text = element_text(size = 10, colour = "black"))
+
+```
+
+```{r}
+ggarrange(peTCH, peATR, nrow = 1, ncol = 2, labels = c('(a)', '(b)')) -> plot1_
+
+ggarrange(peFIBRA, nrow = 1, ncol = 1, labels = '(c)', hjust = -8) -> plot2_
+
+ggarrange(plot1_, plot2_, ncol = 1)
+
+```
+
+
+
+```{r}
+model_waasb <- waasb(ddf, 
+                     env = ENV,
+                     gen = CLONE,
+                     rep = REP,
+                     random = "env",
+                     resp  = everything())
+```
+
+```{r}
+get_model_data(model_waasb, "WAASBY")
+```
+
+```{r}
+plot_scores(model_waasb, type = 3)
+```
+
+
+"Quem ganhou onde"
+
+Formação de mega ambientes com base em todos os genótipos (11)
+
+```{r, message=FALSE}
+library(metan)
+
+ddf |> filter(CLONE != 'G1') -> df_gge1
+
+
+
+
+q_g_onde <- gge(df_gge1, ENV, CLONE, resp = c(ATR, TCH), svp = "symmetrical")
+
+p1 <-plot(q_g_onde, type = 3, size.shape.win = 5,
+          large_label = 6,
+          col.gen = "blue4",
+          col.env = "gray40",
+          annotation = FALSE,
+          title = FALSE) + theme_test()+
+   theme(axis.text = element_text(size = 10, colour = "black"))
+p1
+
+
+
+```
+
+```{r}
+df_gge <- read.table("dados_gge.txt", header = T)
+
+
+df_gge <- df_gge %>% mutate(ENV = as.factor(ENV),
+                            CLONE = as.factor(CLONE),
+                            REP = as.factor(REP))
+```
+
+
+
+```{r}
+
+df_gge |> mutate(ENV = case_when(
+  ENV == 1 ~ 'ULC',
+  ENV == 2 ~ 'UJA',
+  ENV == 3 ~ 'AGR',
+  ENV == 4 ~ 'USV',
+  ENV == 5 ~ 'BIO',
+  ENV == 6 ~ 'UIR',
+  ENV == 7 ~ 'UAV',
+  ENV == 8 ~ 'UVG'
+)) -> df_gge 
+
+#Filtros
+
+## PARTE 1
+
+#df_gge - sem filtro
+p1
+
+ddf |> filter(CLONE != 'G1') -> ddf_1
+
+ddf |> filter(CLONE != 'G3') -> ddf_3
+
+ddf |> filter(CLONE != 'G11') -> ddf_11
+
+
+## PARTE 2
+
+df_gge |> filter(CLONE != 'G1', 
+                 CLONE != 'G10') -> df_gge5
+
+df_gge |> filter(CLONE != 'G1', 
+                 CLONE != 'G3') -> df_gge6
+
+df_gge |> filter(CLONE != 'G7', 
+                 CLONE != 'G11') -> df_gge7
+
+df_gge |> filter(CLONE != 'G7', 
+                 CLONE != 'G3') -> df_gge8
+
+## PARTE 3
+
+df_gge |> filter(CLONE != 'G9', 
+                 CLONE != 'G10') -> df_gge9
+
+df_gge |> filter(CLONE != 'G6', 
+                 CLONE != 'G8',
+                 CLONE != 'G4') -> df_gge10
+```
+
+p1 - todos
+p2 - G1
+p3 - G3
+p4 - G11
+p5 - G8
+p6 - G9
+p7 - G8, G9 e G11
+p8 - G7
+p9 - G3
+p10 - G6
+
+ULC
+UJA
+AGR
+USV
+BIO
+UIR
+UAV
+UVG
+
+
+Desempenho médio vs estabilidade
+```{r, message=FALSE}
+
+library(metan)
+
+
+
+
+gge_desemp_estab <-gge(ddf, ENV, CLONE, resp = TCH, svp = "genotype")
+
+
+
+peTCH <- plot(gge_desemp_estab, type = 2,
+          large_label = 6,
+          col.gen = "black",
+          col.env = "gray",
+          col.line = "blue4",
+          axis_expand = 1.2,
+          title = FALSE,
+          size.text.gen = 4,
+          size.text.env = 4) + theme_test() +
+   theme(axis.text = element_text(size = 10, colour = "black"))
+  
+peTCH
+peATR
+peFIBRA
+
+ggarrange(peTCH, peATR,  nrow = 1, ncol = 2, labels = c('A (TCH)', 'B (ATR)'), font.label = list(size = 10))
+
+```
+
+TCH
+
+
+```{r, message=FALSE}
+library(metan)
+library(ggpubr)
+
+ddf |> filter(CLONE != 'G8') -> ddf_2
+
+q_g_onde2 <- gge(ddf_2, ENV, CLONE, resp = TCH, svp = "symmetrical")
+
+plot(q_g_onde2, type = 3,
+           size.shape.win = 5,
+          large_label = 6,
+          col.gen = "blue4",
+          col.env = "gray40",
+          annotation = FALSE,
+          title = FALSE) + theme_test()+
+   theme(axis.text = element_text(size = 10, colour = "black")) -> p4
+
+ggarrange(p1, p2, p3, p4, nrow = 2, ncol = 2, common.legend = T, labels = c('(a) With all', '(b) -G11', '(C) -G9', '(d) -G8'), font.label = list(size = 10), vjust = 1,hjust = -0.1,legend = "right")  
+
+
+
+```
+
+
+TCH
+
+
+```{r, message=FALSE}
+library(metan)
+
+ddf |> filter(CLONE != 'G1') -> ddf_2
+
+q_g_onde2 <- gge(ddf_2, ENV, CLONE, resp = FIBRA, svp = "symmetrical")
+
+plot(q_g_onde2, type = 3,
+           size.shape.win = 5,
+          large_label = 6,
+          col.gen = "blue4",
+          col.env = "gray40",
+          annotation = FALSE,
+          title = FALSE) + theme_test()+
+   theme(axis.text = element_text(size = 10, colour = "black")) -> p12
+
+ggarrange(p9, p10, p11, p12, nrow = 2, ncol = 2, common.legend = T, labels = c('(a) Com todos', '(b) -G10', '(C) -G6', '(d) -G1'), font.label = list(size = 10), vjust = 1,hjust = -0.1,legend = "right")  
+
+
+
+```
+
+Vencedor
+Para TCH
+p1 - com todos
+p2 - sem o 11 - vencedor e estavel
+p3 - sem o 6
+
+Estável
+p4 - sem o 8
+p5 - 5
+
+
+Instavel
+p6 - 9
+p7 - 4
+p8 - 3
+
+ATR
+vencedor
+p9 - 1
+p10 - 11 e estavel
+p11 - 3 e instavel
+
+Estável
+p12 - 8
+p13 - 9
+
+Instável 
+p14 - 7
+p15 - 6
+
+
+
+```{r, message=FALSE}
+library(metan)
+
+ddf |> filter(CLONE != 'G1') -> ddf_2
+
+q_g_onde2 <- gge(ddf_2, env, CLONE, resp = FIBRA, svp = "symmetrical")
+
+plot(q_g_onde2, type = 3,
+           size.shape.win = 5,
+          large_label = 6,
+          col.gen = "blue4",
+          col.env = "gray40",
+          annotation = FALSE,
+          title = FALSE) + theme_test()+
+   theme(axis.text = element_text(size = 10, colour = "black")) -> p4
+
+
+ggarrange(pF1, p2, p3,p4, nrow = 2, ncol = 2, common.legend = T, labels = c('A (Com todos)', 'B (G10)', 'C (G6)', 'D (G1)'), font.label = list(size = 10), vjust = 1, legend = "right")
+```
+
+FIBRA
+
+```{r, message=FALSE}
+library(ggpubr)
+ddf |> filter(CLONE != 'G11') -> ddf_2
+
+q_g_onde2 <- gge(ddf_2, ENV, CLONE, resp = FIBRA, svp = "symmetrical")
+
+plot(q_g_onde2, type = 3,
+           size.shape.win = 5,
+          large_label = 6,
+          col.gen = "blue4",
+          col.env = "gray40",
+          annotation = FALSE,
+          title = FALSE) + theme_test()+
+   theme(axis.text = element_text(size = 10, colour = "black")) -> p20
+
+
+
+ggarrange(pF1, p16,  nrow = 2, ncol = 2, common.legend = T, labels = c('A (Com todos)', 'B (G10)'))
+
+ggarrange(pF1, p17, p18, nrow = 2, ncol = 2, common.legend = T, labels = c('A (Com todos)', 'B (G1)', 'C (G4)'))
+
+ggarrange(pF1, p19, p20, nrow = 2, ncol = 2, common.legend = T, labels = c('A (Com todos)', 'B (G6)', 'C (G11)'))
+
+```
+
+vencedor
+pF1
+p16 - 10
+
+Estavel
+p17 - 1
+p18 - 4
+
+Instavel
+p19 - G6
+p20 - 11
+
+
